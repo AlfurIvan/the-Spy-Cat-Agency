@@ -4,6 +4,7 @@ from rest_framework.decorators import action
 from .models import SpyCat, Mission, Target
 from .serializers import SpyCatSerializer, MissionSerializer, TargetSerializer
 
+
 class SpyCatViewSet(viewsets.ModelViewSet):
     queryset = SpyCat.objects.all()
     serializer_class = SpyCatSerializer
@@ -28,6 +29,7 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         return Response({"success": "Mission assigned successfully"}, status=status.HTTP_200_OK)
 
+
 class MissionViewSet(viewsets.ModelViewSet):
     queryset = Mission.objects.all()
     serializer_class = MissionSerializer
@@ -45,6 +47,7 @@ class MissionViewSet(viewsets.ModelViewSet):
         mission.save()
 
         return Response({"success": "Mission marked as completed"}, status=status.HTTP_200_OK)
+
 
 class TargetViewSet(viewsets.ModelViewSet):
     queryset = Target.objects.all()
