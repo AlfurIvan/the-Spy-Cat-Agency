@@ -12,12 +12,13 @@ RUN apt-get update && apt-get install -y \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock /app/
-RUN pip install "poetry==$POETRY_VERSION" && poetry config virtualenvs.create false && poetry install --no-dev
+RUN pip install "poetry==$POETRY_VERSION" && poetry config virtualenvs.create false && poetry install
 
-COPY web /app/
+COPY . /app/
 
+COPY ./entrypoint.py /app/
 RUN chmod +x /app/entrypoint.py
 
 EXPOSE 8000
 
-ENTRYPOINT ["./entrypoint.py"]
+ENTRYPOINT ["python", "/app/entrypoint.py"]

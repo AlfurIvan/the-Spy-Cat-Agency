@@ -1,13 +1,37 @@
+import requests
+from django.conf import settings
 from rest_framework import viewsets, status
-from rest_framework.response import Response
 from rest_framework.decorators import action
-from .models import SpyCat, Mission, Target
-from .serializers import SpyCatSerializer, MissionSerializer, TargetSerializer
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+
+from .models import Mission, SpyCat
+from .serializers import MissionSerializer, SpyCatSerializer, MissionAssignSerializer
 
 
 class SpyCatViewSet(viewsets.ModelViewSet):
     queryset = SpyCat.objects.all()
     serializer_class = SpyCatSerializer
+    allowed_methods = ('get', 'post', 'patch', 'delete')
+
+    def create(self, request, *args, **kwargs):
+        breed = request.data.get('breed')
+        url = f"https://api.thecatapi.com/v1/breeds/search?q={breed}"
+        response = requests.get(url, headers={"X-API-KEY": settings.CAT_API_KEY})
+
+        if response.status_code != 200:
+            raise ValidationError("Unable to validate breed due to an API error.")
+
+        if not response.json():
+            raise ValidationError(f"Breed '{breed}' is not recognized.")
+
+        return super().create(request, *args, **kwargs)
+
+    def get_serializer_class(self):
+        if self.action == 'assign_mission':
+            return MissionAssignSerializer
+        else:
+            return SpyCatSerializer
 
     @action(detail=True, methods=['post'])
     def assign_mission(self, request, pk=None):
@@ -31,36 +55,42 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
 
 class MissionViewSet(viewsets.ModelViewSet):
-    queryset = Mission.objects.all()
+    queryset = Mission.objects.prefetch_related('targets').all()
     serializer_class = MissionSerializer
 
-    @action(detail=True, methods=['post'])
-    def complete(self, request, pk=None):
+    def destroy(self, request, *args, **kwargs):
         mission = self.get_object()
-        if mission.is_completed:
-            return Response({"error": "Mission is already completed"}, status=status.HTTP_400_BAD_REQUEST)
-
-        if mission.targets.filter(is_completed=False).exists():
-            return Response({"error": "Not all targets are completed"}, status=status.HTTP_400_BAD_REQUEST)
-
-        mission.is_completed = True
-        mission.save()
-
-        return Response({"success": "Mission marked as completed"}, status=status.HTTP_200_OK)
-
-
-class TargetViewSet(viewsets.ModelViewSet):
-    queryset = Target.objects.all()
-    serializer_class = TargetSerializer
+        if mission.cat:
+            return Response(
+                {"detail": "Cannot delete a mission that is assigned to a cat."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
-    def complete(self, request, pk=None):
-        target = self.get_object()
+    def assign_cat(self, request, pk=None):
+        mission = self.get_object()
+        if mission.cat:
+            return Response(
+                {"detail": "Mission is already assigned to a cat."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        if target.is_completed:
-            return Response({"error": "Target is already completed"}, status=status.HTTP_400_BAD_REQUEST)
+        cat_id = request.data.get('cat_id')
+        try:
+            cat = SpyCat.objects.get(id=cat_id)
+        except SpyCat.DoesNotExist:
+            return Response(
+                {"detail": "Cat not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-        target.is_completed = True
-        target.save()
+        if Mission.objects.filter(cat=cat, complete=False).exists():
+            return Response(
+                {"detail": "Cat is already assigned to another mission."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        return Response({"success": "Target marked as completed"}, status=status.HTTP_200_OK)
+        mission.cat = cat
+        mission.save()
+        return Response({"detail": f"Cat {cat.name} assigned to mission."})

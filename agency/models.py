@@ -1,26 +1,14 @@
 import requests
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.core.exceptions import ValidationError
 
 class SpyCat(models.Model):
-    name = models.CharField(max_length=100)
-    years_of_experience = models.PositiveIntegerField()
+    name = models.CharField(max_length=100, unique=True)
+    years_of_experience = models.PositiveSmallIntegerField()
     breed = models.CharField(max_length=100)
-    salary = models.DecimalField(max_digits=10, decimal_places=2)
-
-    def clean(self):
-        # Validate breed using TheCatAPI
-        url = "https://api.thecatapi.com/v1/breeds"
-        response = requests.get(url, headers={"x-api-key": settings.CAT_API_KEY})
-        print(response, response.status_code, response.json())
-        if response.status_code != 200:
-            raise ValidationError("Unable to validate breed due to an API error.")
-
-        breeds = [breed["name"] for breed in response.json()]
-
-        if self.breed not in breeds:
-            raise ValidationError(f"Breed '{self.breed}' is not recognized.")
+    salary = models.DecimalField(max_digits=10, decimal_places=2,validators=[MinValueValidator(0.01)])
 
     def __str__(self):
         return self.name
@@ -34,7 +22,7 @@ class Mission(models.Model):
 
 class Target(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="targets")
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     country = models.CharField(max_length=100)
     notes = models.TextField(blank=True)
     is_completed = models.BooleanField(default=False)
