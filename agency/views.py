@@ -24,7 +24,7 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         if not response.json():
             raise ValidationError(f"Breed '{breed}' is not recognized.")
-
+        request.data['breed'] =  response.json()[0]['name']
         return super().create(request, *args, **kwargs)
 
     def get_serializer_class(self):

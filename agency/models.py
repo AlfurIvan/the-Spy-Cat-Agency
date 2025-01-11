@@ -1,12 +1,6 @@
-import requests
-import rest_framework.exceptions
-from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework.exceptions import ValidationError
-
-
-
 
 
 class Mission(models.Model):

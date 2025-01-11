@@ -1,7 +1,6 @@
-from rest_framework import serializers, exceptions
-from .models import SpyCat, Mission, Target
-
+from rest_framework import exceptions
 from rest_framework import serializers
+
 from .models import SpyCat, Mission, Target
 
 
@@ -9,8 +8,6 @@ class SpyCatSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpyCat
         fields = ['id', 'name', 'years_of_experience', 'breed', 'salary']
-        read_only_fields = ['name', 'breed']
-
 
 class TargetSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
@@ -43,7 +40,7 @@ class MissionSerializer(serializers.ModelSerializer):
             Target.objects.create(mission=mission, **target_data)
         return mission
 
-    def update(self, instance:Mission, validated_data):
+    def update(self, instance: Mission, validated_data):
         targets_data = validated_data.pop('targets')
         targets = instance.targets.all()
         for target_data in targets_data:
