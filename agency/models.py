@@ -1,17 +1,20 @@
 import requests
+import rest_framework.exceptions
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.core.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError
+
 
 class SpyCat(models.Model):
     name = models.CharField(max_length=100, unique=True)
     years_of_experience = models.PositiveSmallIntegerField()
     breed = models.CharField(max_length=100)
-    salary = models.DecimalField(max_digits=10, decimal_places=2,validators=[MinValueValidator(0.01)])
+    salary = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.01)])
 
     def __str__(self):
         return self.name
+
 
 class Mission(models.Model):
     cat = models.OneToOneField(SpyCat, null=True, blank=True, on_delete=models.SET_NULL, related_name="mission")
@@ -20,15 +23,16 @@ class Mission(models.Model):
     def __str__(self):
         return f"Mission {self.id} ({'Completed' if self.is_completed else 'Ongoing'})"
 
+
 class Target(models.Model):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="targets")
-    name = models.CharField(max_length=100, unique=True)
-    country = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True, blank=False, null=False)
+    country = models.CharField(max_length=100, blank=False, null=False)
     notes = models.TextField(blank=True)
     is_completed = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        # prevent updates to notes if target is completed
+        """prevent updates to notes if target is completed"""
         if self.pk and self.is_completed:
             old_instance = Target.objects.get(pk=self.pk)
             if old_instance.notes != self.notes:
