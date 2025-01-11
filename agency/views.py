@@ -6,7 +6,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from .models import Mission, SpyCat
-from .serializers import MissionSerializer, SpyCatSerializer, MissionAssignSerializer, TargetSerializer
+from .serializers import MissionSerializer, SpyCatSerializer, MissionAssignSerializer, CatAssignSerializer
 
 
 class SpyCatViewSet(viewsets.ModelViewSet):
@@ -31,7 +31,7 @@ class SpyCatViewSet(viewsets.ModelViewSet):
         if self.action == 'assign_mission':
             return MissionAssignSerializer
         else:
-            return SpyCatSerializer
+            return self.serializer_class
 
     @action(detail=True, methods=['post'])
     def assign_mission(self, request, pk=None):
@@ -45,7 +45,6 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         if mission.cat is not None:
             return Response({"error": "Mission already assigned to another cat"}, status=status.HTTP_400_BAD_REQUEST)
-
         cat.mission = mission
         cat.save()
         mission.cat = cat
@@ -53,86 +52,38 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         return Response({"success": "Mission assigned successfully"}, status=status.HTTP_200_OK)
 
-from rest_framework import viewsets, status
-from rest_framework.response import Response
-from rest_framework.decorators import action
-from .models import Mission, Target
-from .serializers import MissionSerializer, TargetSerializer
-
 
 class MissionViewSet(viewsets.ModelViewSet):
     queryset = Mission.objects.prefetch_related('targets').all()
     serializer_class = MissionSerializer
 
+    def get_serializer_class(self, *args, **kwargs):
+        if self.action == 'assign_cat':
+            return CatAssignSerializer
+        else:
+            return self.serializer_class
+
     def destroy(self, request, *args, **kwargs):
         mission = self.get_object()
         if mission.cat:
-            return Response({"detail": "Cannot delete a mission assigned to a cat."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Cannot delete a mission assigned to a cat."},
+                            status=status.HTTP_400_BAD_REQUEST)
         return super().destroy(request, *args, **kwargs)
 
     @action(detail=True, methods=['post'])
     def assign_cat(self, request, pk=None):
         mission = self.get_object()
+        serializer = self.get_serializer(data=request.data)
         if mission.is_completed:
-            return Response({"detail": "Cannot assign a cat to a completed mission."}, status=status.HTTP_400_BAD_REQUEST)
-        cat_id = request.data.get('cat_id')
-        if not cat_id:
-            return Response({"detail": "Cat ID is required."}, status=status.HTTP_400_BAD_REQUEST)
-        mission.cat_id = cat_id
-        mission.save()
-        return Response(self.get_serializer(mission).data)
-
-
-    def update(self, request, *args, **kwargs):
-        mission = self.get_object()
-        targets_data = request.data.get('targets', [])
-
-        # Update or validate targets
-        for target_data in targets_data:
-            target_name = target_data.get("name")
-            target_instance = mission.targets.filter(name=target_name).first()
-            print("WTFFFFFFFFFFFFF -0")
-
-            if target_instance:
-                # Update the existing target
-                print("WTFFFFFFFFFFFFF")
-                target_serializer = TargetSerializer(target_instance, data=target_data, partial=True)
-                print("WTFFFFFFFFFFFFF 2")
-                target_serializer.is_valid(raise_exception=True)
-                print("WTFFFFFFFFFFFFF 3")
-                target_serializer.save()
-            else:
-                # Handle creation or raise an error
-                raise ValidationError(f"Target with name '{target_name}' does not exist in this mission.")
-
-        # Update mission fields
-        serializer = self.get_serializer(mission, data=request.data, partial=True)
+            return Response({"detail": "Cannot assign a cat to a completed mission."},
+                            status=status.HTTP_400_BAD_REQUEST)
         serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
 
-class TargetViewSet(viewsets.ModelViewSet):
-    queryset = Target.objects.select_related('mission').all()
-    serializer_class = TargetSerializer
-
-    def update(self, request, *args, **kwargs):
-        target = self.get_object()
-        if target.mission.is_completed:
-            return Response({"detail": "Cannot update a target in a completed mission."}, status=status.HTTP_400_BAD_REQUEST)
-        return super().update(request, *args, **kwargs)
-
-    @action(detail=True, methods=['post'])
-    def mark_complete(self, request, pk=None):
-        target = self.get_object()
-        if target.is_completed:
-            return Response({"detail": "Target is already completed."}, status=status.HTTP_400_BAD_REQUEST)
-        target.is_completed = True
-        target.save()
-
-        # Check if all targets in the mission are completed
-        mission = target.mission
-        if all(t.is_completed for t in mission.targets.all()):
-            mission.is_completed = True
+        cat = SpyCat.objects.filter(id=serializer.data.get('cat_id')).select_related('mission').first()
+        has_mission = hasattr(cat, "mission")
+        if not has_mission or (has_mission and cat.mission.is_completed):
+            mission.cat = cat
             mission.save()
-
-        return Response(self.get_serializer(target).data)
+            return Response(MissionSerializer(mission).data)
+        else:
+            return Response({"detail": "Cannot assign a cat with a mission to another mission."},)
