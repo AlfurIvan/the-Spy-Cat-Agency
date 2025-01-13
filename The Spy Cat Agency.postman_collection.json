@@ -1,0 +1,109 @@
+{
+	"info": {
+		"_postman_id": "837a57cd-51d7-43fc-9614-0491a3e88ae0",
+		"name": "The Spy Cat Agency",
+		"description": "**Backend Requirements:**\n\n- **Spy Cats**\n    \n    - Ability to create a spy cat in the system\n        \n        - A cat is described as Name, Years of Experience, Breed, and Salary.\n            \n        - Breed must be validated, see General\n            \n    - Ability to remove spy cats from the system\n        \n    - Ability to update spy cats’ information (Salary)\n        \n    - Ability to list spy cats\n        \n    - Ability to get a single spy cat\n        \n- **Missions / Targets**\n    \n    - Ability to create a mission in the system along with targets in one single request\n        \n        - A mission contains information about Cat, Targets and Complete state\n            \n        - Each target is unique to a mission, so the endpoint should accept an object describing targets\n            \n        - A target is described as Name, Country, Notes and Complete state\n            \n    - Ability to delete a mission\n        \n        - A mission cannot be deleted if it is already assigned to a cat\n            \n    - Ability to update mission targets\n        \n        - Ability to mark it as completed\n            \n        - Ability to update Notes\n            \n            - Notes cannot be updated if either the target or the mission is completed\n                \n    - Ability to assign a cat to a mission\n        \n    - Ability to list missions\n        \n    - Ability to get a single mission",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "40925334"
+	},
+	"item": [
+		{
+			"name": "Spycat related actions",
+			"item": [
+				{
+					"name": "List Spycats",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Create Spycat",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Detail Spycat",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Update Spycat",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Spycat",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Assign Mission",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Missions/Targets",
+			"item": [
+				{
+					"name": "List Mission",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Create Mission with nested targets",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Detail Mission",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Update Mission with nested targets",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Mission without cat",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

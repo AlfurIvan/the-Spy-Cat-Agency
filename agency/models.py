@@ -20,13 +20,6 @@ class Target(models.Model):
     notes = models.TextField(blank=True)
     is_completed = models.BooleanField(default=False)
 
-    def save(self, *args, **kwargs):
-        """prevent updates to notes if target is completed"""
-        if self.pk and self.is_completed:
-            old_instance = Target.objects.get(pk=self.pk)
-            if old_instance.notes != self.notes:
-                raise ValidationError("Cannot update notes on a completed target.")
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Target {self.name} ({'Completed' if self.is_completed else 'Ongoing'})"

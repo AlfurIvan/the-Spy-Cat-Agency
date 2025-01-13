@@ -1,5 +1,6 @@
 from rest_framework import exceptions
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
 from .models import SpyCat, Mission, Target
 
@@ -44,17 +45,18 @@ class MissionSerializer(serializers.ModelSerializer):
         targets_data = validated_data.pop('targets')
         targets = instance.targets.all()
         for target_data in targets_data:
-            try:
-                target = targets.filter(pk=target_data.get('id')).first()
-            except Target.DoesNotExist:
-                pass
+
+            target = targets.filter(pk=target_data.get('id'), mission=instance).first()
+            if not target:
+                raise ValidationError({'detail':'Target not found'})
             else:
                 target.notes = target_data.get('notes', target.notes)
                 target.is_completed = target_data.get('is_completed', target.is_completed)
                 target.save()
-                target.refresh_from_db()
 
+        instance.refresh_from_db()
         if all(target.is_completed for target in instance.targets.all()):
+
             instance.is_completed = True
             instance.cat = None
             instance.save()

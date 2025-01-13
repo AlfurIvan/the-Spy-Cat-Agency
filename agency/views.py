@@ -14,9 +14,9 @@ class SpyCatViewSet(viewsets.ModelViewSet):
     serializer_class = SpyCatSerializer
     http_method_names = ['get', 'post', 'patch', 'delete']
 
-    def create(self, request, *args, **kwargs):
-        data = {key:request.data[key] for key in request.data.keys()}
-        breed = data.get('breed')
+    @staticmethod
+    def validate_breed(breed):
+        """Validate the breed using TheCatAPI."""
         url = f"https://api.thecatapi.com/v1/breeds/search?q={breed}"
         response = requests.get(url, headers={"X-API-KEY": settings.CAT_API_KEY})
 
@@ -25,12 +25,21 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         if not response.json():
             raise ValidationError(f"Breed '{breed}' is not recognized.")
-        data['breed'] = response.json()[0]['name']
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        return response.json()[0]['name']
+
+    def perform_create(self, serializer):
+        breed = serializer.validated_data.get('breed')
+        validated_breed = self.validate_breed(breed)
+        serializer.validated_data['breed'] = validated_breed
+        serializer.save()
+
+    def perform_update(self, serializer):
+        breed = serializer.validated_data.get('breed')
+        if breed:
+            validated_breed = self.validate_breed(breed)
+            serializer.validated_data['breed'] = validated_breed
+        serializer.save()
 
     def get_serializer_class(self):
         if self.action == 'assign_mission':
@@ -61,6 +70,8 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 class MissionViewSet(viewsets.ModelViewSet):
     queryset = Mission.objects.prefetch_related('targets').all()
     serializer_class = MissionSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']
+
 
     def get_serializer_class(self, *args, **kwargs):
         if self.action == 'assign_cat':
@@ -74,21 +85,3 @@ class MissionViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Cannot delete a mission assigned to a cat."},
                             status=status.HTTP_400_BAD_REQUEST)
         return super().destroy(request, *args, **kwargs)
-
-    @action(detail=True, methods=['post'])
-    def assign_cat(self, request, pk=None):
-        mission = self.get_object()
-        serializer = self.get_serializer(data=request.data)
-        if mission.is_completed:
-            return Response({"detail": "Cannot assign a cat to a completed mission."},
-                            status=status.HTTP_400_BAD_REQUEST)
-        serializer.is_valid(raise_exception=True)
-
-        cat = SpyCat.objects.filter(id=serializer.data.get('cat_id')).select_related('mission').first()
-        has_mission = hasattr(cat, "mission")
-        if not has_mission or (has_mission and cat.mission.is_completed):
-            mission.cat = cat
-            mission.save()
-            return Response(MissionSerializer(mission).data)
-        else:
-            return Response({"detail": "Cannot assign a cat with a mission to another mission."}, )

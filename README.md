@@ -54,7 +54,7 @@ docker compose up -d --build
 The app should now be running at http://127.0.0.1:8000.
 
 ### 5. Documentation
-Navigate to http://127.0.0.1:8000/api/docs/ for exploration of this app.
+Navigate to http://127.0.0.1:8000/docs/ for exploration of this app.
 
 ### 6. Postman Collection
-    link will be here soon
+    Check the file 'The Spy Cat Agency.postman_collection.json'
