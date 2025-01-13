@@ -12,10 +12,11 @@ from .serializers import MissionSerializer, SpyCatSerializer, MissionAssignSeria
 class SpyCatViewSet(viewsets.ModelViewSet):
     queryset = SpyCat.objects.all()
     serializer_class = SpyCatSerializer
-    allowed_methods = ('get', 'post', 'patch', 'delete')
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def create(self, request, *args, **kwargs):
-        breed = request.data.get('breed')
+        data = {key:request.data[key] for key in request.data.keys()}
+        breed = data.get('breed')
         url = f"https://api.thecatapi.com/v1/breeds/search?q={breed}"
         response = requests.get(url, headers={"X-API-KEY": settings.CAT_API_KEY})
 
@@ -24,8 +25,12 @@ class SpyCatViewSet(viewsets.ModelViewSet):
 
         if not response.json():
             raise ValidationError(f"Breed '{breed}' is not recognized.")
-        request.data['breed'] =  response.json()[0]['name']
-        return super().create(request, *args, **kwargs)
+        data['breed'] = response.json()[0]['name']
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def get_serializer_class(self):
         if self.action == 'assign_mission':
@@ -86,4 +91,4 @@ class MissionViewSet(viewsets.ModelViewSet):
             mission.save()
             return Response(MissionSerializer(mission).data)
         else:
-            return Response({"detail": "Cannot assign a cat with a mission to another mission."},)
+            return Response({"detail": "Cannot assign a cat with a mission to another mission."}, )
